@@ -1,0 +1,18 @@
+From: service@paypa1-secure.com
+To: victim@gmail.com
+Subject: Your PayPal account has been limited
+
+Dear Customer,
+
+We noticed unusual activity on your PayPal account. Your account has been temporarily limited.
+
+Please verify your identity immediately to restore full access:
+http://paypa1-secure-verify.com/account/restore?token=8f3kd92
+http://paypal-login-secure.ru/verify
+
+If you do not verify within 24 hours, your account will be permanently suspended.
+
+Your session was initiated from IP: 185.234.219.67
+
+PayPal Security Team
+support@paypa1-secure.com

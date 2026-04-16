@@ -1,9 +1,14 @@
 import re
 import json
 import os
+import time
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+VT_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
+ABUSE_API_KEY = os.getenv("ABUSEIPDB_API_KEY")
 
 def read_email(filepath):
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -46,6 +51,54 @@ def extract_iocs(text):
         "emails": list(set(emails))
     }
 
+def check_domain_virustotal(domain):
+    url = f"https://www.virustotal.com/api/v3/domains/{domain}"
+
+    headers = {
+        "x-apikey": VT_API_KEY
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        stats = data["data"]["attributes"]["last_analysis_stats"]
+
+        return {
+            "domain": domain,
+            "malicious": stats["malicious"],
+            "suspicious": stats["suspicious"],
+            "undetected": stats["undetected"],
+            "harmless": stats["harmless"]
+        }
+    else:
+        return {"domain": domain, "error": response.status_code}
+
+def check_ip_abuse(ip):
+    url = "https://api.abuseipdb.com/api/v2/check"
+    
+    headers = {
+        "Key": ABUSE_API_KEY,
+        "Accept": "application/json"
+    }
+
+    params = {
+        "ipAddress": ip,
+        "maxAgeInDays": 90
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            "ip": ip,
+            "abuse_score": data["data"]["abuseConfidenceScore"],
+            "country": data["data"]["countryCode"]
+        }
+    else:
+        return {"ip": ip, "error": "API request failed"}
+
 def main():
     samples_dir = 'samples'
     
@@ -63,6 +116,18 @@ def main():
             print(f"Domains found: {len(iocs['domains'])}")
             print(f"Emails found:  {len(iocs['emails'])}")
             print(json.dumps(iocs, indent=2))
+
+            url_results = {}
+            for url in iocs['urls']:
+                print(f"  Checking URL: {url}")
+                url_results[url] = check_domain_virustotal(url)
+                time.sleep(2)
+
+            ip_results = {}
+            for ip in iocs['ips']:
+                print(f"  Checking IP:  {ip}")
+                ip_results[ip] = check_ip_abuse(ip)
+                time.sleep(2)
 
 if __name__ == "__main__":
     main()

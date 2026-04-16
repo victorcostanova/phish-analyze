@@ -1,0 +1,25 @@
+From: alerts@td-secure-banking.com
+To: victim@gmail.com
+Subject: Urgent: Suspicious transaction detected on your account
+
+TD Bank Security Alert
+
+Dear Valued Customer,
+
+A suspicious transaction of $2,847.00 was attempted on your account ending in 4821.
+
+Transaction Details:
+Amount: $2,847.00
+Location: Miami, FL
+IP Address: 203.78.134.56
+Time: 03:42 AM EST
+
+To dispute this transaction and secure your account:
+https://td-secure-banking.net/dispute?ref=TX8821K
+https://tdbank-verify.ru/secure-login
+http://192.168.1.200/bank/authenticate
+
+If you recognize this transaction, no action is needed.
+
+TD Bank Fraud Prevention Team
+security(at)td-secure-banking.com
