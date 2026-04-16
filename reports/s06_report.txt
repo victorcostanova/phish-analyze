@@ -1,0 +1,56 @@
+=======================================================
+       PHISHING ANALYSIS REPORT
+=======================================================
+  Sample  : s06.txt
+  Verdict : LOW RISK (score: 20)
+  URLs    : 2
+  Domains : 4
+  IPs     : 1
+  Emails  : 3
+=======================================================
+
+[ CONCLUSION ]
+
+  Key signals:
+  - Social-engineering language present (4 keyword hits)
+
+  Recommended actions:
+  - If unsure, validate sender via an out-of-band channel
+  - Treat links as untrusted; open only in a safe sandbox if needed
+
+[ DOMAIN ANALYSIS — VirusTotal ]
+
+  Domain  : billing-portal.example.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+  Domain  : billing-portal.example.com.secure-checkout.example.net
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+  Domain  : company.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 60 engines
+
+  Domain  : vendor-billing.example.org
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+[ IP ANALYSIS — AbuseIPDB ]
+
+  IP      : 198.51.100.23
+  Verdict : ⚪ SKIPPED (private/internal IP)
+
+[ SENDER / RECIPIENT EMAILS ]
+
+  ap@vendor-billing.example.org
+  finance@company.com
+  ceo@company.com

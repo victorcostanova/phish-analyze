@@ -1,0 +1,59 @@
+=======================================================
+       PHISHING ANALYSIS REPORT
+=======================================================
+  Sample  : s05.txt
+  Verdict : HIGH RISK (score: 105)
+  URLs    : 1
+  Domains : 4
+  IPs     : 1
+  Emails  : 2
+=======================================================
+
+[ CONCLUSION ]
+
+  Key signals:
+  - Domain flagged malicious by VirusTotal: www.824555.com
+  - Social-engineering language present (5 keyword hits)
+
+  Recommended actions:
+  - Do not click links or open attachments
+  - Quarantine the message and report as phishing
+  - Block listed domains/IPs in email/web controls (if confirmed malicious)
+
+[ DOMAIN ANALYSIS — VirusTotal ]
+
+  Domain  : account-security.example.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+  Domain  : company.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 60 engines
+
+  Domain  : sportoption.php
+  Verdict : ⚠️  ERROR
+  Error   : HTTP 400
+
+  Domain  : www.824555.com
+  Verdict : 🔴 MALICIOUS
+  Malicious  : 3 engines
+  Suspicious : 1 engines
+  Harmless   : 56 engines
+
+[ IP ANALYSIS — AbuseIPDB ]
+
+  IP      : 97.201.127.163
+  Verdict : 🟢 CLEAN
+  Abuse Score   : 0%
+  Total Reports : 0
+  Country       : US
+  ISP           : Verizon Business
+
+[ SENDER / RECIPIENT EMAILS ]
+
+  victim@company.com
+  no-reply@account-security.example.com

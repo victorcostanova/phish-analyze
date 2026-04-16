@@ -1,0 +1,62 @@
+=======================================================
+       PHISHING ANALYSIS REPORT
+=======================================================
+  Sample  : s08.txt
+  Verdict : HIGH RISK (score: 85)
+  URLs    : 1
+  Domains : 4
+  IPs     : 1
+  Emails  : 3
+=======================================================
+
+[ CONCLUSION ]
+
+  Key signals:
+  - Domain flagged malicious by VirusTotal: br-icloud.com.br
+  - Social-engineering language present (1 keyword hits)
+
+  Recommended actions:
+  - Do not click links or open attachments
+  - Quarantine the message and report as phishing
+  - Block listed domains/IPs in email/web controls (if confirmed malicious)
+
+[ DOMAIN ANALYSIS — VirusTotal ]
+
+  Domain  : br-icloud.com.br
+  Verdict : 🔴 MALICIOUS
+  Malicious  : 14 engines
+  Suspicious : 1 engines
+  Harmless   : 47 engines
+
+  Domain  : company.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 60 engines
+
+  Domain  : mailer.example.org
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+  Domain  : ship-notice.example.net
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+[ IP ANALYSIS — AbuseIPDB ]
+
+  IP      : 99.10.70.92
+  Verdict : 🟢 CLEAN
+  Abuse Score   : 0%
+  Total Reports : 0
+  Country       : US
+  ISP           : AT&T Enterprises, LLC
+
+[ SENDER / RECIPIENT EMAILS ]
+
+  bounce@mailer.example.org
+  victim@company.com
+  tracking@ship-notice.example.net

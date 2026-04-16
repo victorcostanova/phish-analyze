@@ -6,8 +6,8 @@ Microsoft Account Team
 
 We detected a sign-in attempt to your Microsoft account from an unrecognized device.
 
-Location: Kyiv, Ukraine
-IP Address: 91.108.56.23
+Location: Zurich, Switzerland
+IP Address: 107.189.1.175
 Device: Windows 11
 
 If this was not you, secure your account immediately:

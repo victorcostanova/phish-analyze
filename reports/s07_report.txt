@@ -1,0 +1,55 @@
+=======================================================
+       PHISHING ANALYSIS REPORT
+=======================================================
+  Sample  : s07.txt
+  Verdict : UNLIKELY (LOW SIGNAL) (score: 10)
+  URLs    : 2
+  Domains : 4
+  IPs     : 1
+  Emails  : 2
+=======================================================
+
+[ CONCLUSION ]
+
+  Key signals:
+  - Social-engineering language present (2 keyword hits)
+
+  Recommended actions:
+  - If unsure, validate sender via an out-of-band channel
+  - Treat links as untrusted; open only in a safe sandbox if needed
+
+[ DOMAIN ANALYSIS — VirusTotal ]
+
+  Domain  : company.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 60 engines
+
+  Domain  : password-reset.example.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+  Domain  : support.example.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 60 engines
+
+  Domain  : www.password-reset.example.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+[ IP ANALYSIS — AbuseIPDB ]
+
+  IP      : 192.0.2.44
+  Verdict : ⚪ SKIPPED (private/internal IP)
+
+[ SENDER / RECIPIENT EMAILS ]
+
+  it-helpdesk@support.example.com
+  victim@company.com

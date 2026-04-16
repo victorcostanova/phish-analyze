@@ -1,0 +1,23 @@
+From: "Accounts Payable" <ap@vendor-billing.example.org>
+To: finance@company.com
+Cc: "CEO" <ceo@company.com>
+Subject: RE: Past Due — Invoice INV-10483 (final reminder)
+Date: Wed, 15 Apr 2026 10:01:09 -0400
+
+Hi Finance Team,
+
+Following up on the past due balance for INV-10483. To avoid service interruption, please confirm payment today.
+
+Invoice portal (view/download):
+hxxps://billing-portal.example.com/invoice/INV-10483?client=company&token=2c7b1a
+
+If you have any issues accessing the portal, use the alternate gateway:
+hxxp://billing-portal.example.com.secure-checkout.example.net/pay?inv=INV-10483
+
+Wire instructions are included on the invoice.
+
+Originating gateway IP (for allowlist): 198.51.100.23
+
+Thanks,
+Accounts Payable
+Vendor Billing Department

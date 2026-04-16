@@ -1,0 +1,56 @@
+=======================================================
+       PHISHING ANALYSIS REPORT
+=======================================================
+  Sample  : s02.txt
+  Verdict : LOW RISK (score: 30)
+  URLs    : 1
+  Domains : 2
+  IPs     : 2
+  Emails  : 3
+=======================================================
+
+[ CONCLUSION ]
+
+  Key signals:
+  - IP has non-zero abuse score (23%) on AbuseIPDB: 115.58.90.63
+  - Social-engineering language present (2 keyword hits)
+
+  Recommended actions:
+  - If unsure, validate sender via an out-of-band channel
+  - Treat links as untrusted; open only in a safe sandbox if needed
+
+[ DOMAIN ANALYSIS — VirusTotal ]
+
+  Domain  : dh1-tracking.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+  Domain  : yahoo.com
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 64 engines
+
+[ IP ANALYSIS — AbuseIPDB ]
+
+  IP      : 115.58.90.63
+  Verdict : 🟡 SUSPICIOUS
+  Abuse Score   : 23%
+  Total Reports : 5
+  Country       : CN
+  ISP           : China Unicom Henan province network
+
+  IP      : 74.125.181.25
+  Verdict : 🟢 CLEAN
+  Abuse Score   : 0%
+  Total Reports : 11
+  Country       : BE
+  ISP           : Google LLC
+
+[ SENDER / RECIPIENT EMAILS ]
+
+  victim@yahoo.com
+  delivery@dh1-tracking.com
+  noreply@dh1-tracking.com
