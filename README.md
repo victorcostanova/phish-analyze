@@ -1,12 +1,9 @@
 # Phishing Analyzer — IOC Extraction & Threat Intelligence Tool
+**Author: Victor Costa Nova**
 
 A Python-based command-line tool that automates phishing email analysis by extracting 
 Indicators of Compromise (IOCs) and querying them against real threat intelligence APIs. 
 Built as part of a personal cybersecurity portfolio to simulate SOC analyst workflows.
-
-## Author
-
-**Victor Costa Nova**
 
 
 ## What It Does
@@ -21,6 +18,7 @@ Built as part of a personal cybersecurity portfolio to simulate SOC analyst work
 - Generates a structured threat report per sample, saved to the `reports/` folder
 
 ## Sample Output
+```plaintext
 =======================================================
 PHISHING ANALYSIS REPORT
 
@@ -85,8 +83,11 @@ Sample  : s03.txt
   no-reply@micros0ft-account.com
   victim@outlook.com
   account-security@micros0ft-account.com
+```
 
 ## Project Structure
+
+```plaintext
 phishing-analyzer/
 ├── samples/          # Phishing email samples (.txt / .eml)
 ├── reports/          # Generated analysis reports
@@ -94,6 +95,7 @@ phishing-analyzer/
 ├── requirements.txt  # Dependencies
 ├── .env              # API keys (never committed)
 └── .gitignore        # Excludes .env and cache files
+```
 
 ## Key Concepts Demonstrated
 
@@ -120,9 +122,13 @@ pip install -r requirements.txt
 **3. Add your API keys**
 
 Create a `.env` file in the root folder:
+## Project Structure
 
+```plaintext
 VIRUSTOTAL_API_KEY=your_key_here
 ABUSEIPDB_API_KEY=your_key_here
+```
+
 
 Free API keys available at:
 - https://www.virustotal.com
