@@ -12,7 +12,7 @@
 [ CONCLUSION ]
 
   Key signals:
-  - Domain flagged malicious by VirusTotal: br-icloud.com.br
+  - Domain flagged malicious by 15 VirusTotal engines: br-icloud.com.br
   - Social-engineering language present (1 keyword hits)
 
   Recommended actions:
@@ -24,15 +24,15 @@
 
   Domain  : br-icloud.com.br
   Verdict : 🔴 MALICIOUS
-  Malicious  : 14 engines
-  Suspicious : 1 engines
-  Harmless   : 47 engines
+  Malicious  : 15 engines
+  Suspicious : 3 engines
+  Harmless   : 43 engines
 
   Domain  : company.com
   Verdict : 🟢 CLEAN
   Malicious  : 0 engines
   Suspicious : 0 engines
-  Harmless   : 60 engines
+  Harmless   : 58 engines
 
   Domain  : mailer.example.org
   Verdict : 🟢 CLEAN

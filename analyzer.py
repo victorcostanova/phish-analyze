@@ -1,3 +1,4 @@
+import argparse
 import re
 import os
 import time
@@ -21,6 +22,35 @@ REQUEST_TIMEOUT_S = 10
 RETRY_ATTEMPTS = 2
 RETRY_SLEEP_S = 2
 
+MIN_ENGINES_MALICIOUS = 3
+
+TRUSTED_DOMAINS = {
+    "outlook.com", "microsoft.com", "office.com", "live.com",
+    "google.com", "gmail.com", "apple.com", "paypal.com",
+    "amazon.com", "yahoo.com",
+}
+
+FILE_EXTS = {
+    "txt", "pdf", "png", "jpg", "jpeg", "gif", "doc", "docx",
+    "xls", "xlsx", "html", "htm",
+}
+
+LEET = str.maketrans("0134", "olea")
+
+
+def is_trusted(domain):
+    return any(domain == trusted or domain.endswith("." + trusted) for trusted in TRUSTED_DOMAINS)
+
+
+def has_no_data(result):
+    return (
+        result.get("malicious", 0)
+        + result.get("suspicious", 0)
+        + result.get("harmless", 0)
+        + result.get("undetected", 0)
+    ) == 0
+
+
 def read_email(filepath):
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
         return f.read()
@@ -30,18 +60,15 @@ def normalize_text(text):
     replacements = {
         '[at]': '@',
         '(at)': '@',
-        ' at ': '@',
         '[dot]': '.',
         '(dot)': '.',
-        ' dot ': '.',
-        ' @ ': '@',
-        ' . ': '.',
+        '[.]': '.',
+        '(.)': '.',
+        '[:]': ':',
     }
     for k, v in replacements.items():
         text = text.replace(k, v)
-    # Common URL defanging
-    text = re.sub(r'\bhxxps://', 'https://', text)
-    text = re.sub(r'\bhxxp://', 'http://', text)
+    text = re.sub(r'\bhxxp', 'http', text)
     return text
 
 def _get_with_retry(url: str, *, headers=None, params=None) -> requests.Response:
@@ -87,6 +114,8 @@ def _extract_domains_from_text(text: str) -> Set[str]:
         if not d:
             continue
         if _is_valid_ipv4(d):
+            continue
+        if d.rsplit(".", 1)[-1] in FILE_EXTS:
             continue
         out.add(d)
     return out
@@ -165,6 +194,8 @@ def check_domain_virustotal(domain):
                 "undetected": stats["undetected"],
                 "harmless": stats["harmless"]
             }
+        elif response.status_code == 404:
+            return {"malicious": 0, "suspicious": 0, "undetected": 0, "harmless": 0}
         else:
             return {"error": f"HTTP {response.status_code}"}
     except Exception as e:
@@ -197,12 +228,16 @@ def check_ip_abuseipdb(ip):
     except Exception as e:
         return {"error": str(e)}
 
-def verdict_domain(result):
+def verdict_domain(domain, result):
     if "error" in result:
         return "⚠️  ERROR"
-    if result["malicious"] > 0:
+    if is_trusted(domain):
+        return "🟢 TRUSTED (known legitimate)"
+    if has_no_data(result):
+        return "⚪ UNKNOWN (no reputation data)"
+    if result["malicious"] >= MIN_ENGINES_MALICIOUS:
         return "🔴 MALICIOUS"
-    if result["suspicious"] > 0:
+    if result["malicious"] > 0 or result["suspicious"] > 0:
         return "🟡 SUSPICIOUS"
     return "🟢 CLEAN"
 
@@ -223,14 +258,19 @@ def _heuristic_assessment(text: str, iocs, domain_results, ip_results):
 
     # Strong signals from enrichment
     for d, r in domain_results.items():
-        if "error" in r:
+        if "error" in r or is_trusted(d):
             continue
-        if r.get("malicious", 0) > 0:
+        malicious = r.get("malicious", 0)
+        suspicious = r.get("suspicious", 0)
+        if malicious >= MIN_ENGINES_MALICIOUS:
             score += 80
-            reasons.append(f"Domain flagged malicious by VirusTotal: {d}")
-        elif r.get("suspicious", 0) > 0:
+            reasons.append(f"Domain flagged malicious by {malicious} VirusTotal engines: {d}")
+        elif malicious > 0 or suspicious > 0:
             score += 35
             reasons.append(f"Domain flagged suspicious by VirusTotal: {d}")
+        elif has_no_data(r):
+            score += 10
+            reasons.append(f"Domain has no reputation data on VirusTotal (possibly new): {d}")
 
     for ip, r in ip_results.items():
         if r.get("skipped") or "error" in r:
@@ -260,8 +300,11 @@ def _heuristic_assessment(text: str, iocs, domain_results, ip_results):
     # Brand-looking domains (simple heuristic)
     suspicious_brands = ["paypal", "microsoft", "office", "outlook", "apple", "google", "dhl", "fedex", "amazon", "bank"]
     for d in iocs.get("domains", []):
+        if is_trusted(d):
+            continue
+        d_norm = d.translate(LEET)
         for b in suspicious_brands:
-            if b in d and not d.endswith(f"{b}.com") and d != f"{b}.com":
+            if b in d_norm:
                 score += 10
                 reasons.append(f"Possible brand-impersonation domain: {d}")
                 break
@@ -271,8 +314,10 @@ def _heuristic_assessment(text: str, iocs, domain_results, ip_results):
         score += 10
         reasons.append("Multiple URLs present")
 
+    score = min(score, 100)
+
     # Verdict buckets
-    if score >= 80:
+    if score >= 60:
         verdict = "HIGH RISK"
     elif score >= 40:
         verdict = "MEDIUM RISK"
@@ -323,7 +368,7 @@ def generate_report(filename, text, iocs, domain_results, ip_results):
     lines.append("\n[ DOMAIN ANALYSIS — VirusTotal ]\n")
     for domain, result in domain_results.items():
         lines.append(f"  Domain  : {domain}")
-        lines.append(f"  Verdict : {verdict_domain(result)}")
+        lines.append(f"  Verdict : {verdict_domain(domain, result)}")
         if "error" not in result:
             lines.append(f"  Malicious  : {result['malicious']} engines")
             lines.append(f"  Suspicious : {result['suspicious']} engines")
@@ -354,71 +399,110 @@ def generate_report(filename, text, iocs, domain_results, ip_results):
 
     return "\n".join(lines)
 
-def main():
-    samples_dir = 'samples'
-    reports_dir = 'reports'
+def analyze_file(filepath, report_path):
+    filename = os.path.basename(filepath)
+    print(f"\n{'='*40}")
+    print(f"Analyzing: {filename}")
+    print(f"{'='*40}")
+
+    text = normalize_text(read_email(filepath))
+    iocs = extract_iocs(text)
+
+    print(f"  URLs    : {len(iocs['urls'])}")
+    print(f"  Domains : {len(iocs['domains'])}")
+    print(f"  IPs     : {len(iocs['ips'])}")
+    print(f"  Emails  : {len(iocs['emails'])}")
+
+    domain_results = {}
+    for domain in iocs['domains']:
+        print(f"\n  [VT]  Checking domain: {domain}")
+        cache_before = check_domain_virustotal.cache_info()
+        domain_results[domain] = check_domain_virustotal(domain)
+        cache_after = check_domain_virustotal.cache_info()
+        result = domain_results[domain]
+        print(f"        Verdict: {verdict_domain(domain, result)}")
+        if cache_after.hits == cache_before.hits:
+            print(f"        Waiting {VT_DELAY}s (rate limit)...")
+            time.sleep(VT_DELAY)
+        else:
+            print("        (cached) no wait")
+
+    ip_results = {}
+    for ip in iocs['ips']:
+        if is_internal_ip(ip):
+            print(f"\n  [IP]  Skipping internal/unroutable IP: {ip}")
+            ip_results[ip] = {"skipped": True}
+            continue
+        print(f"\n  [IP]  Checking: {ip}")
+        cache_before = check_ip_abuseipdb.cache_info()
+        ip_results[ip] = check_ip_abuseipdb(ip)
+        cache_after = check_ip_abuseipdb.cache_info()
+        result = ip_results[ip]
+        print(f"        Verdict: {verdict_ip(result)}")
+        if cache_after.hits == cache_before.hits:
+            time.sleep(ABUSE_DELAY)
+        else:
+            print("        (cached) no wait")
+
+    report = generate_report(filename, text, iocs, domain_results, ip_results)
+    os.makedirs(os.path.dirname(report_path) or ".", exist_ok=True)
+    with open(report_path, 'w', encoding='utf-8') as f:
+        f.write(report)
+
+    print(f"\n  ✅ Report saved: {report_path}")
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Analyze phishing email samples.")
+    parser.add_argument(
+        "email_file",
+        nargs="?",
+        help="Path to one .txt or .eml file. Omit to analyze every sample in samples/.",
+    )
+    parser.add_argument(
+        "report_path",
+        nargs="?",
+        help="Optional output path for the report (only valid with email_file).",
+    )
+    args = parser.parse_args(argv)
+
+    reports_dir = "reports"
     os.makedirs(reports_dir, exist_ok=True)
 
+    if args.email_file:
+        if not os.path.isfile(args.email_file):
+            parser.error(f"input file does not exist: {args.email_file}")
+        if os.path.splitext(args.email_file)[1].lower() not in {".txt", ".eml"}:
+            parser.error("input file must have a .txt or .eml extension")
+
+        default_report_name = os.path.splitext(os.path.basename(args.email_file))[0]
+        if not args.report_path:
+            report_path = os.path.join(
+                reports_dir, f"{default_report_name}_report.txt"
+            )
+        elif os.path.isdir(args.report_path) or args.report_path.endswith(
+            (os.sep, "/", "\\")
+        ):
+            report_path = os.path.join(
+                args.report_path, f"{default_report_name}_report.txt"
+            )
+        else:
+            report_path = args.report_path
+        if os.path.abspath(report_path) == os.path.abspath(args.email_file):
+            parser.error("report path must not overwrite the input file")
+        analyze_file(args.email_file, report_path)
+        return
+
+    if args.report_path:
+        parser.error("report_path can only be used when email_file is provided")
+
+    samples_dir = "samples"
     for filename in os.listdir(samples_dir):
-        if not (filename.endswith('.txt') or filename.endswith('.eml')):
+        if os.path.splitext(filename)[1].lower() not in {".txt", ".eml"}:
             continue
-
         filepath = os.path.join(samples_dir, filename)
-        print(f"\n{'='*40}")
-        print(f"Analyzing: {filename}")
-        print(f"{'='*40}")
-
-        text = read_email(filepath)
-        text = normalize_text(text)
-        iocs = extract_iocs(text)
-
-        print(f"  URLs    : {len(iocs['urls'])}")
-        print(f"  Domains : {len(iocs['domains'])}")
-        print(f"  IPs     : {len(iocs['ips'])}")
-        print(f"  Emails  : {len(iocs['emails'])}")
-
-        # Check domains against VirusTotal
-        domain_results = {}
-        for domain in iocs['domains']:
-            print(f"\n  [VT]  Checking domain: {domain}")
-            cache_before = check_domain_virustotal.cache_info()
-            domain_results[domain] = check_domain_virustotal(domain)
-            cache_after = check_domain_virustotal.cache_info()
-            result = domain_results[domain]
-            print(f"        Verdict: {verdict_domain(result)}")
-            if cache_after.hits == cache_before.hits:
-                print(f"        Waiting {VT_DELAY}s (rate limit)...")
-                time.sleep(VT_DELAY)
-            else:
-                print("        (cached) no wait")
-
-        # Check IPs against AbuseIPDB
-        ip_results = {}
-        for ip in iocs['ips']:
-            if is_internal_ip(ip):
-                print(f"\n  [IP]  Skipping internal/unroutable IP: {ip}")
-                ip_results[ip] = {"skipped": True}
-                continue
-            print(f"\n  [IP]  Checking: {ip}")
-            cache_before = check_ip_abuseipdb.cache_info()
-            ip_results[ip] = check_ip_abuseipdb(ip)
-            cache_after = check_ip_abuseipdb.cache_info()
-            result = ip_results[ip]
-            print(f"        Verdict: {verdict_ip(result)}")
-            if cache_after.hits == cache_before.hits:
-                time.sleep(ABUSE_DELAY)
-            else:
-                print("        (cached) no wait")
-
-        # Save report
-        report = generate_report(filename, text, iocs, domain_results, ip_results)
-        report_filename = filename.replace('.txt', '').replace('.eml', '') + '_report.txt'
-        report_path = os.path.join(reports_dir, report_filename)
-
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write(report)
-
-        print(f"\n  ✅ Report saved: {report_path}")
+        report_filename = f"{os.path.splitext(filename)[0]}_report.txt"
+        analyze_file(filepath, os.path.join(reports_dir, report_filename))
 
 if __name__ == "__main__":
     main()

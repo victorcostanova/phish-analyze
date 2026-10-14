@@ -36,7 +36,7 @@
   Verdict : 🟢 CLEAN
   Malicious  : 0 engines
   Suspicious : 0 engines
-  Harmless   : 60 engines
+  Harmless   : 58 engines
 
   Domain  : vendor-billing.example.org
   Verdict : 🟢 CLEAN

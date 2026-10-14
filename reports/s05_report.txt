@@ -2,7 +2,7 @@
        PHISHING ANALYSIS REPORT
 =======================================================
   Sample  : s05.txt
-  Verdict : HIGH RISK (score: 105)
+  Verdict : HIGH RISK (score: 60)
   URLs    : 1
   Domains : 4
   IPs     : 1
@@ -12,7 +12,7 @@
 [ CONCLUSION ]
 
   Key signals:
-  - Domain flagged malicious by VirusTotal: www.824555.com
+  - Domain flagged suspicious by VirusTotal: www.824555.com
   - Social-engineering language present (5 keyword hits)
 
   Recommended actions:
@@ -32,17 +32,17 @@
   Verdict : 🟢 CLEAN
   Malicious  : 0 engines
   Suspicious : 0 engines
-  Harmless   : 60 engines
+  Harmless   : 58 engines
 
   Domain  : sportoption.php
   Verdict : ⚠️  ERROR
   Error   : HTTP 400
 
   Domain  : www.824555.com
-  Verdict : 🔴 MALICIOUS
-  Malicious  : 3 engines
-  Suspicious : 1 engines
-  Harmless   : 56 engines
+  Verdict : 🟡 SUSPICIOUS
+  Malicious  : 1 engines
+  Suspicious : 3 engines
+  Harmless   : 53 engines
 
 [ IP ANALYSIS — AbuseIPDB ]
 

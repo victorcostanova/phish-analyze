@@ -2,7 +2,7 @@
        PHISHING ANALYSIS REPORT
 =======================================================
   Sample  : s01.txt
-  Verdict : HIGH RISK (score: 290)
+  Verdict : HIGH RISK (score: 100)
   URLs    : 3
   Domains : 5
   IPs     : 2
@@ -12,9 +12,8 @@
 [ CONCLUSION ]
 
   Key signals:
-  - Domain flagged malicious by VirusTotal: mernex0or.dartvar.in.net
-  - Domain flagged malicious by VirusTotal: verification.google
-  - IP has high abuse score (100%) on AbuseIPDB: 78.128.43.246
+  - Domain flagged malicious by 10 VirusTotal engines: mernex0or.dartvar.in.net
+  - Domain flagged suspicious by VirusTotal: verification.google
   - Social-engineering language present (4 keyword hits)
   - Possible brand-impersonation domain: td-secure-banking.com
   - Possible brand-impersonation domain: td-secure-banking.net
@@ -29,15 +28,15 @@
 [ DOMAIN ANALYSIS — VirusTotal ]
 
   Domain  : gmail.com
-  Verdict : 🟢 CLEAN
+  Verdict : 🟢 TRUSTED (known legitimate)
   Malicious  : 0 engines
   Suspicious : 0 engines
-  Harmless   : 62 engines
+  Harmless   : 59 engines
 
   Domain  : mernex0or.dartvar.in.net
   Verdict : 🔴 MALICIOUS
-  Malicious  : 14 engines
-  Suspicious : 3 engines
+  Malicious  : 10 engines
+  Suspicious : 2 engines
   Harmless   : 46 engines
 
   Domain  : td-secure-banking.com
@@ -53,10 +52,10 @@
   Harmless   : 0 engines
 
   Domain  : verification.google
-  Verdict : 🔴 MALICIOUS
-  Malicious  : 1 engines
-  Suspicious : 0 engines
-  Harmless   : 57 engines
+  Verdict : 🟡 SUSPICIOUS
+  Malicious  : 0 engines
+  Suspicious : 3 engines
+  Harmless   : 54 engines
 
 [ IP ANALYSIS — AbuseIPDB ]
 
@@ -64,9 +63,9 @@
   Verdict : ⚪ SKIPPED (private/internal IP)
 
   IP      : 78.128.43.246
-  Verdict : 🔴 MALICIOUS
-  Abuse Score   : 100%
-  Total Reports : 252
+  Verdict : 🟢 CLEAN
+  Abuse Score   : 0%
+  Total Reports : 1
   Country       : BG
   ISP           : Telepoint Ltd
 

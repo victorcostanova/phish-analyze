@@ -2,7 +2,7 @@
        PHISHING ANALYSIS REPORT
 =======================================================
   Sample  : s04.txt
-  Verdict : HIGH RISK (score: 135)
+  Verdict : HIGH RISK (score: 100)
   URLs    : 1
   Domains : 3
   IPs     : 1
@@ -12,9 +12,10 @@
 [ CONCLUSION ]
 
   Key signals:
-  - Domain flagged malicious by VirusTotal: paypal.com.myaccount.validation.jossy.psess5659835478.blesuites.com
-  - IP has non-zero abuse score (4%) on AbuseIPDB: 64.49.37.174
+  - Domain flagged suspicious by VirusTotal: paypal.com.myaccount.validation.jossy.psess5659835478.blesuites.com
+  - IP has non-zero abuse score (21%) on AbuseIPDB: 64.49.37.174
   - Social-engineering language present (6 keyword hits)
+  - Possible brand-impersonation domain: paypa1-secure.com
   - Possible brand-impersonation domain: paypal.com.myaccount.validation.jossy.psess5659835478.blesuites.com
 
   Recommended actions:
@@ -25,34 +26,34 @@
 [ DOMAIN ANALYSIS — VirusTotal ]
 
   Domain  : gmail.com
-  Verdict : 🟢 CLEAN
+  Verdict : 🟢 TRUSTED (known legitimate)
   Malicious  : 0 engines
   Suspicious : 0 engines
-  Harmless   : 62 engines
+  Harmless   : 59 engines
 
   Domain  : paypa1-secure.com
   Verdict : 🟢 CLEAN
   Malicious  : 0 engines
   Suspicious : 0 engines
-  Harmless   : 58 engines
+  Harmless   : 55 engines
 
   Domain  : paypal.com.myaccount.validation.jossy.psess5659835478.blesuites.com
-  Verdict : 🔴 MALICIOUS
-  Malicious  : 3 engines
-  Suspicious : 0 engines
-  Harmless   : 58 engines
+  Verdict : 🟡 SUSPICIOUS
+  Malicious  : 0 engines
+  Suspicious : 1 engines
+  Harmless   : 54 engines
 
 [ IP ANALYSIS — AbuseIPDB ]
 
   IP      : 64.49.37.174
   Verdict : 🟡 SUSPICIOUS
-  Abuse Score   : 4%
-  Total Reports : 1
+  Abuse Score   : 21%
+  Total Reports : 5
   Country       : US
   ISP           : Hostaly LLC
 
 [ SENDER / RECIPIENT EMAILS ]
 
-  service@paypa1-secure.com
   victim@gmail.com
+  service@paypa1-secure.com
   support@paypa1-secure.com
