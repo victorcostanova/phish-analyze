@@ -1,164 +1,128 @@
-# Phishing Analyzer — IOC Extraction & Threat Intelligence Tool
+# Phish Analyze
 
 **Author: Victor Costa Nova**
 
-A Python-based command-line tool that automates phishing email analysis by extracting
-Indicators of Compromise (IOCs) and querying them against real threat intelligence APIs.
-Built as part of a personal cybersecurity portfolio to simulate SOC analyst workflows.
+A passive email-triage tool with a command-line interface, a Flask website,
+indicator extraction, header inspection, attachment hashes, and text/JSON reports.
 
-## What It Does
+## Project structure
 
-- Parses phishing email samples (.txt / .eml) and extracts:
-  - Malicious URLs
-  - Suspicious domains
-  - IP addresses
-  - Sender/recipient email addresses
-- Queries extracted domains against **VirusTotal**
-- Queries extracted IPs against **AbuseIPDB**
-- Generates a structured threat report per sample, saved to the `reports/` folder
-
-## Sample Output
-
-```plaintext
-=======================================================
-PHISHING ANALYSIS REPORT
-
-Sample  : s03.txt
-  Verdict : HIGH RISK (score: 100)
-  URLs    : 2
-  Domains : 4
-  IPs     : 1
-  Emails  : 3
-
-[ CONCLUSION ]
-
-  Key signals:
-  - Domain flagged suspicious by VirusTotal: login-microsoft-secure.tk
-  - Domain flagged malicious by 4 VirusTotal engines: micros0ft-account.com
-  - IP has high abuse score (100%) on AbuseIPDB: 107.189.1.175
-  - Social-engineering language present (6 keyword hits)
-  - Possible brand-impersonation domain: login-microsoft-secure.tk
-  - Possible brand-impersonation domain: micros0ft-account-verify.net
-  - Possible brand-impersonation domain: micros0ft-account.com
-
-  Recommended actions:
-  - Do not click links or open attachments
-  - Quarantine the message and report as phishing
-  - Block listed domains/IPs in email/web controls (if confirmed malicious)
-
-[ DOMAIN ANALYSIS — VirusTotal ]
-
-  Domain  : login-microsoft-secure.tk
-  Verdict : 🟡 SUSPICIOUS
-  Malicious  : 0 engines
-  Suspicious : 2 engines
-  Harmless   : 54 engines
-
-  Domain  : micros0ft-account-verify.net
-  Verdict : 🟢 CLEAN
-  Malicious  : 0 engines
-  Suspicious : 0 engines
-  Harmless   : 0 engines
-
-  Domain  : micros0ft-account.com
-  Verdict : 🔴 MALICIOUS
-  Malicious  : 4 engines
-  Suspicious : 1 engines
-  Harmless   : 51 engines
-
-  Domain  : outlook.com
-  Verdict : 🟢 TRUSTED (known legitimate)
-  Malicious  : 1 engines
-  Suspicious : 0 engines
-  Harmless   : 64 engines
-
-[ IP ANALYSIS — AbuseIPDB ]
-
-  IP      : 107.189.1.175
-  Verdict : 🔴 MALICIOUS
-  Abuse Score   : 100%
-  Total Reports : 139
-  Country       : CH
-  ISP           : BuyVM
-
-[ SENDER / RECIPIENT EMAILS ]
-
-  no-reply@micros0ft-account.com
-  victim@outlook.com
-  account-security@micros0ft-account.com
+```text
+phish-analyze/
+|-- phish_analyze/             # Application source code
+|   |-- __init__.py           # Declares the Python package
+|   |-- __main__.py           # Command-line entry point
+|   |-- analyzer.py           # Analysis, scoring, and reporting
+|   |-- email_parser.py       # Email parsing and indicator extraction
+|   |-- threat_intel.py       # Optional reputation API integration
+|   |-- paths.py              # Input, output, and configuration paths
+|   `-- web/                  # Flask web interface
+|       |-- __init__.py       # Declares the web package
+|       |-- __main__.py       # Local server entry point
+|       |-- app.py            # Routes and request handling
+|       |-- templates/        # HTML pages
+|       `-- static/           # CSS styles
+|-- input/                    # Your .txt and .eml files to analyze
+|-- reports/                  # Reports from everyday use
+|-- deploy/azure/             # Azure deployment preparation
+|   |-- package_azure.py      # Creates the deployment ZIP
+|   `-- packages/             # Generated ZIP, ignored by Git
+|-- docs/                     # Detailed documentation
+|   |-- USAGE.md              # Features, options, and limitations
+|   |-- AZURE.md              # Deployment instructions
+|   `-- ROADMAP.md            # Future improvements and interview walkthrough
+|-- tests/                    # Optional material; removable after validation
+|   |-- automated/            # Regression tests
+|   |-- samples/              # Sample email messages
+|   |-- reports/              # Historical and validation results
+|   `-- temporary/            # Caches and previous validation artifacts
+|-- .github/workflows/        # GitHub automation
+|-- .venv/                    # Local Python environment and dependencies
+|-- .env                      # Your API keys, ignored by Git
+|-- .gitignore                # Files excluded from version control
+`-- requirements.txt          # Application dependencies
 ```
 
-Reputation counts and verdicts can change as VirusTotal and AbuseIPDB data is updated.
+## What the Python support files do
 
-## Project Structure
+`.venv/` is a virtual environment created by Python tooling. It isolates this
+project's dependencies from other projects. On Windows it contains:
 
-```plaintext
-phishing-analyzer/
-├── samples/          # Phishing email samples (.txt / .eml)
-├── reports/          # Generated analysis reports
-├── analyzer.py       # Main script
-├── requirements.txt  # Dependencies
-├── .env              # API keys (never committed)
-└── .gitignore        # Excludes .env and cache files
+- `Scripts/`: the Python executable, command-line tools, and activation scripts.
+  `activate.bat` activates the environment in Command Prompt; `Activate.ps1`
+  does so in PowerShell. `activate_this.py` supports activation inside an
+  existing Python process and is not used by this application's normal commands.
+- `Lib/site-packages/`: installed third-party libraries, including Flask,
+  Requests, python-dotenv, and their dependencies.
+- `pyvenv.cfg`: information about the Python installation used by the environment.
+- Tool-generated files such as `.gitignore`, `.lock`, and `CACHEDIR.TAG`.
+
+Activation is optional when using `.venv\Scripts\python.exe` directly. The
+application does not own the library files inside `.venv/`; reinstall dependencies
+from `requirements.txt` when recreating the environment. The environment is
+ignored by Git and excluded from the deployment ZIP.
+
+`__init__.py` marks a directory as a regular Python package. These files only
+need descriptive text here; they do not need executable statements. Keeping
+package markers makes the package structure explicit.
+
+`__main__.py` is executable: Python runs it when you use `python -m` with the
+package name. The top-level file calls the analyzer, while the file under `web/`
+starts the local server. Both support the commands below and are retained.
+
+The hidden `.git/` directory stores repository history.
+
+## Run the application
+
+Run these commands from the repository root:
+
+```powershell
+# Initial setup if the environment does not exist yet
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# Web interface: open http://127.0.0.1:8000
+.venv\Scripts\python.exe -m phish_analyze.web
+
+# Analyze all messages placed in input/
+.venv\Scripts\python.exe -m phish_analyze --offline
+
+# Analyze one file and write JSON to reports/
+.venv\Scripts\python.exe -m phish_analyze input/message.eml --format json
 ```
 
-## Key Concepts Demonstrated
+`input/` starts empty. You can also supply a file from another directory, select
+an input folder with `--input-dir`, or choose a report folder with `--output-dir`.
+The old `python analyzer.py` and `python app.py` commands have been replaced by
+the module commands above.
 
-- **IOC Extraction** — automated identification of threat indicators from unstructured text
-- **Threat Intelligence Integration** — real-time reputation checks via industry-standard APIs
-- **Rate Limit Handling** — respects API constraints with controlled request timing
-- **Private IP Filtering** — skips RFC 1918 addresses to avoid unnecessary API calls
-- **Structured Reporting** — output mirrors real SOC incident documentation format
+Analysis is **offline by default**. For external lookups, configure `.env` in the
+project root and use `--enrich`. The application does not visit extracted links
+or execute attachments. A low score does not establish that a message is safe.
 
-## Setup & Usage
+## Tests and disposable files
 
-**1. Clone the repository**
+All test material lives in [`tests/`](tests/README.md). Removing this directory
+does not affect analysis of your own messages, the web application, or deployment
+packaging. The built-in web example continues to work.
 
-```bash
-git clone https://github.com/victorcostanova/phish-analyze.git
-cd phish-analyze
+```powershell
+.venv\Scripts\python.exe -B -m unittest discover -s tests/automated -v
+.venv\Scripts\python.exe -B -m phish_analyze --offline --input-dir tests/samples --output-dir tests/reports/generated
 ```
 
-**2. Install dependencies**
+## Deployment and documentation
 
-```bash
-pip install -r requirements.txt
+Generate an up-to-date Azure package:
+
+```powershell
+.venv\Scripts\python.exe deploy/azure/package_azure.py
 ```
 
-**3. Add your API keys**
+The result is `deploy/azure/packages/phish-analyze.zip`. It excludes credentials,
+tests, input messages, and reports. The Gunicorn entry point is
+`phish_analyze.web.app:app`.
 
-Create a `.env` file in the root folder:
-
-## Project Structure
-
-```plaintext
-VIRUSTOTAL_API_KEY=your_key_here
-ABUSEIPDB_API_KEY=your_key_here
-```
-
-Free API keys available at:
-
-- https://www.virustotal.com
-- https://www.abuseipdb.com
-
-**4. Add email samples**
-
-Place `.txt` or `.eml` phishing email files in the `samples/` folder.
-
-**5. Run the analyzer**
-
-```bash
-# Analyze all .txt and .eml files in samples/
-python3 analyzer.py
-
-# Analyze one file; save to reports/s05_report.txt by default
-python3 analyzer.py samples/s05.txt
-
-# Analyze one file and choose the output directory; filename is generated automatically
-python3 analyzer.py samples/s05.txt reports/
-```
-
-Reports for a batch run are saved automatically to the `reports/` folder. For a
-single-file run, the optional second argument can be an output directory (the
-report filename is generated automatically) or an explicit report file path.
-The output directory is created automatically if needed.
+- [Usage and limitations](docs/USAGE.md)
+- [Azure deployment](docs/AZURE.md)
+- [Future improvements and interview walkthrough](docs/ROADMAP.md)
