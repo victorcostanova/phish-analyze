@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phish Analyze | Email triage workspace</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar"><a href="/" class="brand">PA<span>PHISH ANALYZE</span></a><span class="mode">Offline analysis</span></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">ANALYST WORKSPACE</p>
+      <h1>Turn a suspicious email<br>into a clear investigation.</h1>
+      <p class="lede">Extract indicators, inspect evidence, and take an informed next step.</p>
+    </section>
+    <div class="workspace">
+      <section class="panel input-panel">
+        <div class="section-heading"><h2>Analyze a message</h2><span>.eml / .txt</span></div>
+        <p class="muted">Paste the original message with headers, or select a file. Maximum 1 MiB.</p>
+        {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+        <form method="post" enctype="multipart/form-data">
+          <label for="email_text">Email source</label>
+          <textarea id="email_text" name="email_text" placeholder="From: sender@example.org&#10;Subject: A message to investigate&#10;&#10;Paste the message here…" spellcheck="false">{{ text }}</textarea>
+          <label for="email_file">Or upload a message</label>
+          <input id="email_file" type="file" name="email_file" accept=".eml,.txt">
+          <p class="hint">A selected file takes priority over pasted text.</p>
+          <div class="buttons"><button name="action" value="analyze">Analyze message</button><button class="secondary" name="action" value="demo">Try training sample</button></div>
+          <div class="export"><span>Export current input</span><button class="text-button" name="action" value="text">Text report</button><button class="text-button" name="action" value="json">JSON report</button></div>
+        </form>
+        <div class="privacy"><strong>Passive by design</strong><p>Processed in server memory. The app does not save messages, follow links, or send indicators to reputation services. Use synthetic or redacted samples in this public demo.</p></div>
+      </section>
+      <section class="panel results-panel" aria-label="Analysis results">
+        {% if result %}
+          <div class="section-heading"><h2>Triage result</h2><span>{{ result.source.filename }}</span></div>
+          <div class="verdict"><div><p class="eyebrow">{{ result.assessment.verdict }}</p><strong>{{ result.assessment.score }}<span>/ 100</span></strong></div><p>{{ result.assessment.note }}</p></div>
+          <div class="counts">{% for kind, values in result.iocs.items() %}<div><strong>{{ values|length }}</strong><span>{{ kind|capitalize }}</span></div>{% endfor %}</div>
+          <h3>Why this score</h3>
+          {% for finding in result.assessment.findings %}<article class="finding"><span class="weight">+{{ finding.weight }}</span><div><strong>{{ finding.summary }}</strong><code>{{ finding.evidence|defang }}</code></div></article>{% else %}<p>No configured heuristic matched. This does not establish safety.</p>{% endfor %}
+          <h3>Indicators</h3><p class="hint">Defanged for review. JSON exports preserve original extracted values.</p>
+          {% for kind, values in result.iocs.items() %}<details {% if kind == 'urls' %}open{% endif %}><summary>{{ kind|capitalize }} <span>{{ values|length }}</span></summary>{% for value in values %}<code class="indicator">{{ value|defang }}</code>{% else %}<p class="hint">None extracted.</p>{% endfor %}</details>{% endfor %}
+          <details><summary>Headers &amp; authentication claims</summary><p class="hint">These headers can be forged. SPF, DKIM, and DMARC have not been independently verified.</p>{% for name, values in result.headers.items() %}{% for value in values %}<p><strong>{{ name }}</strong><code>{{ value|defang }}</code></p>{% endfor %}{% endfor %}</details>
+          <details><summary>Attachments <span>{{ result.attachments|length }}</span></summary>{% for attachment in result.attachments %}<p><strong>{{ attachment.filename }}</strong> · {{ attachment.size_bytes }} bytes<code>SHA-256: {{ attachment.sha256 }}</code></p>{% else %}<p class="hint">No attachments found.</p>{% endfor %}</details>
+          <h3>Next steps</h3><ul>{% for action in result.assessment.actions %}<li>{{ action }}</li>{% endfor %}</ul>
+          <details><summary>Evidence &amp; limitations</summary><code>SHA-256: {{ result.source.sha256 }}</code><p>{{ result.analyzed_at }}</p>{% for warning in result.warnings %}<p class="hint">{{ warning }}</p>{% endfor %}</details>
+          <p class="hint">To export an uploaded file, select it again and choose a report format. Uploaded content is not retained.</p>
+        {% else %}
+          <div class="section-heading"><h2>Evidence before conclusions</h2><span>READY</span></div>
+          <div class="empty"><div class="symbol" aria-hidden="true">@</div><h3>Your investigation starts here.</h3><p>Add a message to build a structured view of its indicators and warning signs.</p></div>
+          <div class="feature"><strong>Inspect the evidence</strong><p>URLs, domains, IPs, email headers, and attachment hashes.</p></div>
+          <div class="feature"><strong>Understand every finding</strong><p>See the rule, supporting evidence, and contribution to the score.</p></div>
+          <div class="feature"><strong>Document the next step</strong><p>Export a defanged report for handoff or JSON for your own tools.</p></div>
+        {% endif %}
+      </section>
+    </div>
+    <footer>Built by Victor Costa Nova · Security portfolio project <span>Triage support. Analyst judgment required.</span></footer>
+  </main>
+</body>
+</html>
