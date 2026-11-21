@@ -2,4 +2,22 @@
 __pycache__/
 *.pyc
 
+.venv/
+.env.*
+!.env.example
+
+docs/
 tests/
+
+# Local input and everyday reports
+input/*
+!input/README.md
+reports/*
+!reports/README.md
+
+# Disposable test results and caches
+tests/temporary/
+tests/reports/generated/
+
+# Generated deployment packages
+deploy/azure/packages/

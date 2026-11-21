@@ -1,0 +1,24 @@
+name: Python checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Automated tests (optional)
+        if: ${{ hashFiles('tests/automated/test_*.py') != '' }}
+        run: python -m unittest discover -s tests/automated -v
+      - name: Sample analysis (optional)
+        if: ${{ hashFiles('tests/samples/*.txt') != '' }}
+        run: python -m phish_analyze --offline --format json --input-dir tests/samples --output-dir tests/reports/generated
+      - run: python deploy/azure/package_azure.py
