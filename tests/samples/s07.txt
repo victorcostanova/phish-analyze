@@ -1,0 +1,21 @@
+From: "IT Helpdesk" <it-helpdesk@support.example.com>
+To: victim@company.com
+Subject: Password Expiration Notice — Reset Required Immediately
+Date: Wed, 15 Apr 2026 11:37:55 -0400
+
+Your password expires today.
+
+To maintain access to email and VPN, reset your password immediately:
+http://password-reset.example.com/owa/reset?user=victim
+
+For users behind the corporate proxy, use this link:
+www.password-reset.example.com/owa/reset
+
+If you do not reset within 30 minutes, your mailbox will be locked and you will be unable to receive messages.
+
+Helpdesk reference: HD-774219
+Proxy edge: 192.0.2.44
+
+-- 
+IT Helpdesk
+Support Center

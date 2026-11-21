@@ -1,0 +1,22 @@
+From: "Microsoft 365 Security" <no-reply@account-security.example.com>
+To: victim@company.com
+Subject: Action required: MFA re-validation for your account
+Date: Wed, 15 Apr 2026 09:12:44 -0400
+
+Hello,
+
+We detected an unusual sign-in attempt to your Microsoft 365 account from:
+IP: 97.201.127.163
+Location: "US"
+Device: Windows / Chrome
+
+To prevent temporary suspension, you must re-validate Multi‑Factor Authentication within 2 hours.
+
+Verify now:
+http://www.824555.com/app/member/SportOption.php?uid=guest&langx=gb
+
+
+Regards,
+Microsoft 365 Security Team
+
+Note: This mailbox is not monitored. Do not reply.

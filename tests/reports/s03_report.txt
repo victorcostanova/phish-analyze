@@ -1,0 +1,67 @@
+=======================================================
+       PHISHING ANALYSIS REPORT
+=======================================================
+  Sample  : s03.txt
+  Verdict : HIGH RISK (score: 100)
+  URLs    : 2
+  Domains : 4
+  IPs     : 1
+  Emails  : 3
+=======================================================
+
+[ CONCLUSION ]
+
+  Key signals:
+  - Domain flagged suspicious by VirusTotal: login-microsoft-secure.tk
+  - Domain flagged malicious by 4 VirusTotal engines: micros0ft-account.com
+  - IP has high abuse score (100%) on AbuseIPDB: 107.189.1.175
+  - Social-engineering language present (6 keyword hits)
+  - Possible brand-impersonation domain: login-microsoft-secure.tk
+  - Possible brand-impersonation domain: micros0ft-account-verify.net
+  - Possible brand-impersonation domain: micros0ft-account.com
+
+  Recommended actions:
+  - Do not click links or open attachments
+  - Quarantine the message and report as phishing
+  - Block listed domains/IPs in email/web controls (if confirmed malicious)
+
+[ DOMAIN ANALYSIS — VirusTotal ]
+
+  Domain  : login-microsoft-secure.tk
+  Verdict : 🟡 SUSPICIOUS
+  Malicious  : 0 engines
+  Suspicious : 2 engines
+  Harmless   : 54 engines
+
+  Domain  : micros0ft-account-verify.net
+  Verdict : 🟢 CLEAN
+  Malicious  : 0 engines
+  Suspicious : 0 engines
+  Harmless   : 0 engines
+
+  Domain  : micros0ft-account.com
+  Verdict : 🔴 MALICIOUS
+  Malicious  : 4 engines
+  Suspicious : 1 engines
+  Harmless   : 51 engines
+
+  Domain  : outlook.com
+  Verdict : 🟢 TRUSTED (known legitimate)
+  Malicious  : 1 engines
+  Suspicious : 0 engines
+  Harmless   : 59 engines
+
+[ IP ANALYSIS — AbuseIPDB ]
+
+  IP      : 107.189.1.175
+  Verdict : 🔴 MALICIOUS
+  Abuse Score   : 100%
+  Total Reports : 216
+  Country       : CH
+  ISP           : BuyVM
+
+[ SENDER / RECIPIENT EMAILS ]
+
+  account-security@micros0ft-account.com
+  no-reply@micros0ft-account.com
+  victim@outlook.com
