@@ -15,6 +15,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: python -m pip install -r requirements.txt
+      - run: python -m pip check
       - name: Automated tests (optional)
         if: ${{ hashFiles('tests/automated/test_*.py') != '' }}
         run: python -m unittest discover -s tests/automated -v
@@ -22,3 +23,6 @@ jobs:
         if: ${{ hashFiles('tests/samples/*.txt') != '' }}
         run: python -m phish_analyze --offline --format json --input-dir tests/samples --output-dir tests/reports/generated
       - run: python deploy/azure/package_azure.py
+      - name: Validate deployment ZIP with Gunicorn
+        if: ${{ hashFiles('tests/validate_deployment.py') != '' }}
+        run: python -B tests/validate_deployment.py

@@ -9,6 +9,7 @@ FILES = (
     "phish_analyze/__init__.py", "phish_analyze/__main__.py",
     "phish_analyze/paths.py", "phish_analyze/analyzer.py",
     "phish_analyze/email_parser.py", "phish_analyze/threat_intel.py",
+    "phish_analyze/evidence.py", "phish_analyze/web/rate_limit.py",
     "phish_analyze/web/__init__.py", "phish_analyze/web/__main__.py",
     "phish_analyze/web/app.py", "phish_analyze/web/templates/index.html",
     "phish_analyze/web/static/style.css",
