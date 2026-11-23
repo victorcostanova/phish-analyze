@@ -11,10 +11,10 @@ from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
-from .email_parser import (MAX_INPUT_BYTES, defang, extract_iocs, is_internal_ip,
-                          normalize_text, parse_email, url_host)
+from .email_parser import MAX_INPUT_BYTES, defang, is_internal_ip, parse_email, url_host
 from .threat_intel import IntelClient
 from .paths import ENV_FILE, INPUT_DIR, REPORTS_DIR
+from .evidence import SCORING_SOURCES, collect_evidence
 
 KNOWN_DOMAINS = {"outlook.com", "microsoft.com", "office.com", "live.com", "google.com",
                  "gmail.com", "apple.com", "paypal.com", "amazon.com", "yahoo.com",
@@ -41,7 +41,7 @@ def verdict_domain(domain, result):
     return "NO DETECTIONS (not proof of safety)"
 
 
-def _heuristic_assessment(text, iocs, domain_results, ip_results, headers=None, attachments=None):
+def _heuristic_assessment(text, iocs, domain_results, ip_results, headers=None, attachments=None, links=None):
     findings = []
 
     def add(rule, weight, summary, evidence):
@@ -75,6 +75,12 @@ def _heuristic_assessment(text, iocs, domain_results, ip_results, headers=None, 
         add("ip_url", 10, "Link uses an IP address instead of a domain", "IP-based URL")
     if any("xn--" in d for d in iocs["domains"]):
         add("idn_domain", 5, "Internationalized domain; check for visual impersonation", "Punycode hostname")
+    mismatches = [link for link in links or [] if link["status"] == "mismatch"]
+    if mismatches:
+        add("link_domain_mismatch", 25,
+            "Displayed link domain differs from its destination; verify whether tracking is legitimate",
+            "; ".join(f"{link['location']}: {link['displayed_host']} -> {link['target_host']}"
+                      for link in mismatches[:3]))
     headers = headers or {}
     sender = {a.rsplit("@", 1)[-1].lower() for _, a in getaddresses(headers.get("From", [])) if "@" in a}
     reply = {a.rsplit("@", 1)[-1].lower() for _, a in getaddresses(headers.get("Reply-To", [])) if "@" in a}
@@ -87,39 +93,73 @@ def _heuristic_assessment(text, iocs, domain_results, ip_results, headers=None, 
         add("risky_attachment", 20, "Attachment type can carry executable content", ", ".join(risky))
     score = min(100, sum(f["weight"] for f in findings))
     verdict = "HIGH RISK" if score >= 60 else "MEDIUM RISK" if score >= 40 else "LOW SIGNAL"
-    actions = ["Validate the sender and request through a known, separate channel.",
-               "Review each indicator in context before blocking; recipients and mail relays can be legitimate."]
-    if score >= 40:
-        actions.insert(0, "Preserve the original message, avoid interaction, and escalate for analyst review.")
+    if verdict == "HIGH RISK":
+        action_title = "Stop interaction. Report this message now."
+        action_summary = "High-risk indicators require urgent review. Treat this message as potential phishing until verified."
+        actions = [
+            "Do not click links, open attachments, reply, share passwords or verification codes, or approve unexpected MFA prompts.",
+            "Report the message to your security team immediately using your organization's phishing-reporting channel. Preserve the original email and this report.",
+            "If you already entered credentials or approved an MFA request, tell your security team immediately. Use the official service through a known address to secure the account and revoke sessions with their guidance.",
+            "If you opened or ran an attachment, stop interacting with it and report the affected device. Follow your organization's incident-response instructions.",
+            "Confirm the request through a contact or website you already trust. Do not use phone numbers, reply addresses, or links supplied in this message.",
+        ]
+    elif verdict == "MEDIUM RISK":
+        action_title = "Pause and verify before taking action."
+        action_summary = "Suspicious indicators need investigation. Keep links and attachments unopened while you verify the request."
+        actions = [
+            "Do not reply, follow links, open attachments, or provide credentials until the message has been reviewed.",
+            "Contact the claimed sender through a previously known number or address, not contact details supplied in the email.",
+            "Send the original email and this report to your security team for review. Highlight the suspicious links, sender differences, or attachment findings.",
+            "If you already shared information or opened an attachment, report what happened promptly so the team can assess exposure.",
+        ]
+    else:
+        action_title = "Stay cautious with unexpected requests."
+        action_summary = "Few configured signals were found. This is not confirmation that the message is safe."
+        actions = [
+            "Verify unexpected requests through a known, separate contact channel before taking action.",
+            "Use the service's official website or app rather than an unexpected email link when signing in.",
+            "If the message still seems unusual, report it for review; missing reputation data and a low score do not establish safety.",
+        ]
     return {"score": score, "verdict": verdict, "findings": findings, "actions": actions,
+            "action_title": action_title, "action_summary": action_summary,
             "note": "Heuristic triage score, not a probability. Low signal and zero detections do not establish safety."}
 
 
 def analyze_bytes(raw, *, filename="sample.eml", client=None):
     parsed = parse_email(raw)
-    iocs = extract_iocs(parsed["text"])
-    domains = {d: client.lookup("domain", d) if client else {"status": "skipped", "reason": "Offline mode"}
-               for d in iocs["domains"]}
-    ips = {ip: {"status": "skipped", "reason": "Non-public IP address"} if is_internal_ip(ip)
-           else client.lookup("ip", ip) if client else {"status": "skipped", "reason": "Offline mode"}
-           for ip in iocs["ips"]}
+    iocs, indicator_sources, scoring_iocs, links = collect_evidence(parsed)
+
+    def lookup(kind, value, eligible):
+        if value not in eligible:
+            return {"status": "skipped", "reason": "Context-only indicator; not used for risk scoring"}
+        if kind == "ip" and is_internal_ip(value):
+            return {"status": "skipped", "reason": "Non-public IP address"}
+        return client.lookup(kind, value) if client else {"status": "skipped", "reason": "Offline mode"}
+
+    domains = {d: lookup("domain", d, scoring_iocs["domains"]) for d in iocs["domains"]}
+    ips = {ip: lookup("ip", ip, scoring_iocs["ips"]) for ip in iocs["ips"]}
     results = list(domains.values()) + list(ips.values())
     checked = sum(r["status"] == "ok" for r in results)
     warnings = parsed["warnings"] + [
         "Authentication-Results headers are reported claims, not independently verified SPF/DKIM/DMARC results.",
         "Attachment contents are hashed but not executed, unpacked, or malware-scanned.",
+        "Recipient, relay, authentication and displayed-link-only indicators are context, not risk evidence.",
+        "Link comparison uses parsed HTML text and a bundled suffix list; CSS visibility, redirects and ownership are not verified.",
     ]
     if checked < len(results):
         warnings.append("Reputation coverage is incomplete; unchecked or unknown indicators are not safe verdicts.")
-    return {"schema_version": 1, "source": {"filename": filename,
+    scoring_text = "\n".join(s["text"] for s in parsed["segments"]
+                             if s["source"] in SCORING_SOURCES | {"link_text"})
+    return {"schema_version": 2, "source": {"filename": filename,
             "sha256": hashlib.sha256(raw).hexdigest(), "size_bytes": len(raw)},
             "analyzed_at": datetime.now(timezone.utc).isoformat(),
             "mode": "enrichment_requested" if client and client.enabled else "offline",
             "iocs": iocs, "headers": parsed["headers"], "attachments": parsed["attachments"],
+            "indicator_sources": indicator_sources, "scoring_iocs": scoring_iocs, "links": links,
             "domain_results": domains, "ip_results": ips,
             "coverage": {"checked": checked, "total": len(results)},
-            "assessment": _heuristic_assessment(parsed["text"], iocs, domains, ips,
-                                                 parsed["headers"], parsed["attachments"]),
+            "assessment": _heuristic_assessment(scoring_text, scoring_iocs, domains, ips,
+                                                 parsed["headers"], parsed["attachments"], links),
             "warnings": warnings}
 
 
@@ -136,7 +176,17 @@ def generate_report(result):
     if not assessment["findings"]:
         lines.append("No configured heuristic matched.")
     for kind, indicators in result["iocs"].items():
-        lines.extend(["", kind.upper() + " (defanged)"] + [defang(v) for v in indicators])
+        lines.extend(["", kind.upper() + " (defanged)"])
+        for value in indicators:
+            context = "risk-review candidate" if value in result["scoring_iocs"][kind] else "context only"
+            lines.append(f"{defang(value)} [{context}]")
+            for origin in result["indicator_sources"][kind][value]:
+                lines.append(f"  Source: {origin['label']} | {origin['location']}")
+    lines.extend(["", "LINK COMPARISON (no navigation)"])
+    for link in result["links"]:
+        lines.extend([f"{link['location']}: {link['status']}",
+                      f"  Displayed: {defang(link['text'])}",
+                      f"  Destination: {defang(link['href'])}", f"  {link['reason']}"])
     lines.extend(["", "REPUTATION"])
     for domain, data in result["domain_results"].items():
         lines.append(f"{defang(domain)}: {verdict_domain(domain, data)} | {json.dumps(data)}")
@@ -147,7 +197,8 @@ def generate_report(result):
         lines.extend(f"{name}: {defang(v)}" for v in values)
     lines.extend(["", "ATTACHMENTS (metadata only)"])
     lines.extend(defang(json.dumps(a)) for a in result["attachments"])
-    lines.extend(["", "NEXT ACTIONS"] + assessment["actions"])
+    lines.extend(["", "NEXT ACTIONS", assessment["action_title"], assessment["action_summary"]]
+                 + assessment["actions"])
     lines.extend(["", "LIMITATIONS"] + result["warnings"])
     return "\n".join(lines) + "\n"
 

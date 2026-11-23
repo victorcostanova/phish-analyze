@@ -11,6 +11,7 @@ import requests
 
 from phish_analyze.analyzer import analyze_bytes, analyze_file, main, verdict_domain
 from phish_analyze.web.app import app
+from phish_analyze.web.rate_limit import AnalysisRateLimiter
 from phish_analyze.email_parser import MAX_INPUT_BYTES, defang, extract_iocs, is_internal_ip, normalize_text, parse_email
 from phish_analyze.threat_intel import IntelClient
 
@@ -108,7 +109,7 @@ class ParsingTests(unittest.TestCase):
                 analyze_file(source, source)
             target = Path(folder) / "report.json"
             analyze_file(source, target, output_format="json")
-            self.assertEqual(json.loads(target.read_text())["schema_version"], 1)
+            self.assertEqual(json.loads(target.read_text())["schema_version"], 2)
 
     def test_offline_cli_never_calls_network(self):
         with tempfile.TemporaryDirectory() as folder, patch("requests.Session.request") as network:
@@ -201,6 +202,7 @@ class IntelTests(unittest.TestCase):
 class WebTests(unittest.TestCase):
     def setUp(self):
         app.config["TESTING"] = True
+        app.extensions["analysis_rate_limiter"] = AnalysisRateLimiter()
         self.web = app.test_client()
 
     def test_home_demo_and_health(self):
@@ -231,8 +233,10 @@ class WebTests(unittest.TestCase):
     def test_empty_wrong_extension_and_oversized(self):
         self.assertEqual(self.web.post("/", data={"email_text": ""}).status_code, 400)
         self.assertEqual(self.web.post("/", data={"email_file": (io.BytesIO(b"Hi"), "bad.exe")}).status_code, 400)
-        response = self.web.post("/", data={"email_file": (io.BytesIO(b"x" * (MAX_INPUT_BYTES + 70000)), "big.eml")})
-        self.assertEqual(response.status_code, 413)
+        # A raw oversized request avoids Werkzeug's test-upload spool files.
+        with self.web.post("/", data=b"x" * (MAX_INPUT_BYTES + 70000),
+                           content_type="multipart/form-data; boundary=oversized") as response:
+            self.assertEqual(response.status_code, 413)
 
 
 if __name__ == "__main__":

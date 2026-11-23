@@ -11,6 +11,8 @@ from urllib.parse import urlsplit
 MAX_INPUT_BYTES = 1024 * 1024
 MAX_PARTS = 100
 MAX_INDICATORS = 500
+MAX_HTML_LINKS = 500
+MAX_SEGMENTS = 2000
 DOMAIN_RE = re.compile(
     r"(?<![\w.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+"
     r"(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})(?![\w.-])", re.I
@@ -56,14 +58,53 @@ class EmailHTML(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.text = []
         self.links = []
+        self.anchors = []
+        self.anchor = None
+        self.hidden_depth = 0
 
     def handle_data(self, data):
-        self.text.append(data)
+        if self.hidden_depth:
+            return
+        if self.anchor is not None:
+            self.anchor["label_parts"].append(data)
+        else:
+            self.text.append(data)
 
     def handle_starttag(self, tag, attrs):
+        if tag in {"script", "style"}:
+            self.hidden_depth += 1
+        if self.hidden_depth:
+            return
+        if tag == "a":
+            self._finish_anchor()
+            self.anchor = {"href": dict(attrs).get("href") or "", "label_parts": []}
+        if tag == "br":
+            self.handle_data(" ")
         for key, value in attrs:
-            if key in {"href", "src", "action"} and value:
+            if key in {"href", "src", "action"} and value and not (tag == "a" and key == "href"):
                 self.links.append(value)
+                self._check_limit()
+
+    def handle_endtag(self, tag):
+        if tag in {"script", "style"} and self.hidden_depth:
+            self.hidden_depth -= 1
+        if not self.hidden_depth and tag == "a":
+            self._finish_anchor()
+
+    def _check_limit(self):
+        if len(self.links) + len(self.anchors) > MAX_HTML_LINKS:
+            raise ValueError("Email exceeds the 500 HTML link limit.")
+
+    def _finish_anchor(self):
+        if self.anchor is not None:
+            self.anchors.append({"href": self.anchor["href"],
+                                 "text": "".join(self.anchor["label_parts"]).strip()})
+            self.anchor = None
+            self._check_limit()
+
+    def close(self):
+        super().close()
+        self._finish_anchor()
 
 
 def parse_email(raw):
@@ -76,11 +117,22 @@ def parse_email(raw):
     except RecursionError as error:
         raise ValueError("Email nesting exceeds the parser's supported depth.") from error
     headers = {name: [str(v) for v in message.get_all(name, [])]
-               for name in ("From", "To", "Reply-To", "Return-Path", "Subject",
+               for name in ("From", "Sender", "To", "Cc", "Bcc", "Reply-To", "Return-Path", "Subject",
                             "Date", "Message-ID", "Authentication-Results", "Received")}
     text_parts = []
     attachments = []
     warnings = []
+    segments, links = [], []
+    html_link_count = 0
+
+    def segment(source, location, text):
+        if len(segments) >= MAX_SEGMENTS:
+            raise ValueError("Email exceeds the 2000 evidence segment limit.")
+        segments.append({"source": source, "location": location, "text": normalize_text(text)})
+
+    for name, values in headers.items():
+        for occurrence, value in enumerate(values, 1):
+            segment("header_" + name.lower().replace("-", "_"), f"{name} #{occurrence}", value)
     pending = [message]
     index = 0
     while pending:
@@ -93,7 +145,7 @@ def parse_email(raw):
         if part.is_multipart() and (part.get_filename() or part.get_content_disposition() == "attachment"):
             attachments.append({"filename": part.get_filename() or "unnamed",
                                 "content_type": part.get_content_type(), "size_bytes": None,
-                                "sha256": None})
+                                "sha256": None, "part_index": index})
             warnings.append("Attached multipart messages were not inspected or hashed.")
             continue
         if part.is_multipart():
@@ -104,7 +156,7 @@ def parse_email(raw):
             attachments.append({"filename": part.get_filename() or "unnamed",
                                 "content_type": part.get_content_type(),
                                 "size_bytes": len(payload),
-                                "sha256": hashlib.sha256(payload).hexdigest()})
+                                "sha256": hashlib.sha256(payload).hexdigest(), "part_index": index})
         elif part.get_content_type() in {"text/plain", "text/html"}:
             try:
                 content = payload.decode(part.get_content_charset() or "utf-8", errors="replace")
@@ -114,7 +166,22 @@ def parse_email(raw):
             if part.get_content_type() == "text/html":
                 html = EmailHTML()
                 html.feed(content)
-                content = "\n".join(html.text + html.links)
+                html.close()
+                html_link_count += len(html.anchors) + len(html.links)
+                if html_link_count > MAX_HTML_LINKS:
+                    raise ValueError("Email exceeds the 500 HTML link limit.")
+                segment("body_html", f"MIME part {index}: HTML text", "\n".join(html.text))
+                for anchor_index, anchor in enumerate(html.anchors, 1):
+                    location = f"MIME part {index}: link {anchor_index}"
+                    links.append({**anchor, "location": location})
+                    segment("link_text", location + " label", anchor["text"])
+                    segment("link_target", location + " href", anchor["href"])
+                for resource_index, resource in enumerate(html.links, 1):
+                    segment("html_resource", f"MIME part {index}: resource {resource_index}", resource)
+                content = "\n".join(html.text + html.links +
+                                    [a["text"] + "\n" + a["href"] for a in html.anchors])
+            else:
+                segment("body_plain", f"MIME part {index}: plain text", content)
             text_parts.append(content)
     # Avoid interpreting MIME boundary strings and attachment bytes as indicators.
     evidence = "\n".join(v for values in headers.values() for v in values)
@@ -122,8 +189,11 @@ def parse_email(raw):
     if not any(headers.values()) and not message.get("Content-Type") and not message.get("MIME-Version"):
         # Bare URLs such as https://host/path look like RFC header fields.
         evidence = raw.decode("utf-8", errors="replace")
+        segments = []
+        segment("body_plain", "Plain text input", evidence)
     return {"text": normalize_text(evidence), "headers": headers,
-            "attachments": attachments, "warnings": sorted(set(warnings))}
+            "attachments": attachments, "warnings": sorted(set(warnings)),
+            "segments": segments, "links": links}
 
 
 def extract_iocs(text):

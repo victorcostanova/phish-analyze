@@ -2,12 +2,14 @@
 
 import io
 import json
+import os
 from pathlib import Path
 
 from flask import Flask, Request, Response, render_template, request
 
 from ..analyzer import analyze_bytes, generate_report
 from ..email_parser import MAX_INPUT_BYTES, defang
+from .rate_limit import AnalysisRateLimiter
 
 
 class MemoryRequest(Request):
@@ -21,15 +23,37 @@ app.request_class = MemoryRequest
 app.config.update(MAX_CONTENT_LENGTH=MAX_INPUT_BYTES + 65536,
                   MAX_FORM_MEMORY_SIZE=MAX_INPUT_BYTES + 65536, MAX_FORM_PARTS=10)
 app.jinja_env.filters["defang"] = defang
+app.extensions["analysis_rate_limiter"] = AnalysisRateLimiter(
+    limit=int(os.getenv("ANALYSIS_RATE_LIMIT", "30")))
 
 DEMO = """From: Microsoft Security <notice@micros0ft-support.example>
 To: analyst@example.org
 Reply-To: help@response.example.net
 Subject: Urgent: verify your account
+Content-Type: text/html; charset=utf-8
 
-Your account is suspended. Verify your password immediately:
-hxxps://microsoft.com@micros0ft-support[.]example/Reset?token=AbC
+<p>Your account is suspended. Verify your password immediately:</p>
+<a href="https://microsoft.com@micros0ft-support.example/Reset?token=AbC">https://microsoft.com</a>
 """
+
+
+@app.before_request
+def limit_analysis_requests():
+    # Reject before request.form/files parses an upload. All analysis, demo and
+    # export submissions share the budget; forwarded IP headers cannot bypass it.
+    if request.method == "POST" and request.path == "/":
+        retry_after = app.extensions["analysis_rate_limiter"].admit()
+        if retry_after:
+            response = app.make_response((render_template(
+                "index.html", text="", result=None,
+                error=f"Analysis limit reached. Try again in {retry_after} seconds."), 429))
+            response.headers["Retry-After"] = str(retry_after)
+            return response
+
+
+@app.context_processor
+def rate_limit_context():
+    return {"analysis_limit": app.extensions["analysis_rate_limiter"].limit}
 
 
 @app.after_request
